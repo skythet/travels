@@ -1,20 +1,18 @@
 local module = {}
 
-http_server = require('http.server')
+local turbo = require("turbo")
 db = require('db') 
 
-httpd = http_server.new('0.0.0.0', 8888, {
-    display_errors = true,
-    log_requests = true
+local HelloWorldHandler = class("HelloWorldHandler", turbo.web.RequestHandler)
+function HelloWorldHandler:get()
+    self:write("Stopped!")
+end
+
+local app = turbo.web.Application:new({
+    {"/stop", HelloWorldHandler}
 })
 
-httpd:route({ path = '/' }, function(req) 
-    local resp = req:render({text = req.method..' '..req.path })
-    resp.headers['x-test-header'] = 'test';
-    resp.status = 201
-    return resp
-end)
-
-httpd:start()
+app:listen(80)
+turbo.ioloop.instance():start()
 
 return module
