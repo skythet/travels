@@ -5,14 +5,17 @@ local utils = require("utils")
 local cjson = require("cjson")
 
 function module.init_schema()
-    box.schema.create_space('users', { if_not_exists = true })
+    box.schema.create_space('users')
     box.space.users:create_index('primary', {parts = {1, 'integer'}})
 
-    box.schema.create_space('locations', { if_not_exists = true })
+    box.schema.create_space('locations')
     box.space.locations:create_index('primary', {parts = {1, 'integer'}})
+    box.space.locations:create_index('country', {parts = {3, 'string'}, unique = false})
 
-    box.schema.create_space('visits', { if_not_exists = true })
+    box.schema.create_space('visits')
     box.space.visits:create_index('primary', {parts = {1, 'integer'}})
+    box.space.visits:create_index('user', {parts = {3, 'integer'}, unique = false})
+    box.space.visits:create_index('location', {parts = {2, 'integer'}, unique = false})
 
     box.schema.user.grant('guest', 'read,write,execute', 'universe')
 end
@@ -39,7 +42,19 @@ function module.load_data()
 
             if entities.visits then
                 for _, visit in pairs(entities.visits) do
-                    box.space.visits:insert{visit.id, visit.location, visit.user, visit.visited_at, visit.mark}
+                    local location = box.space.locations:get(visit.location)
+                    local user = box.space.users:get(visit.user)
+                    box.space.visits:insert{
+                        visit.id, 
+                        visit.location, 
+                        visit.user, 
+                        visit.visited_at, 
+                        visit.mark,
+                        location[5],
+                        location[2],
+                        user[5],
+                        user[6]
+                    }
                 end 
             end
         end

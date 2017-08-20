@@ -1,8 +1,6 @@
 log = require('log')
 console = require('console')
 db = require('db')
-console = require('console')
-
 
 box.cfg {
     memtx_memory = 128 * 1024 * 1024;
@@ -10,7 +8,7 @@ box.cfg {
     wal_dir = '/var/lib/tarantool/';
 }
 
-console.listen('/var/lib/tarantool/admin.sock')
+console.listen('0.0.0.0:3301')
 
 box.once('init_schema', db.init_schema)
 db.load_data()
