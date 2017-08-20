@@ -6,6 +6,7 @@ RUN echo "deb http://download.tarantool.org/tarantool/1.7/debian/ jessie main" >
 RUN apt-get update && apt-get -y install tarantool
 RUN luarocks install turbo
 RUN luarocks install luafilesystem
+RUN mkdir -p /tarantool-admin/
 
 RUN cd /tmp && \
     git clone https://github.com/mpx/lua-cjson.git && \
@@ -19,4 +20,4 @@ WORKDIR /opt/tarantool
 
 EXPOSE 80 3301
 
-CMD ["tarantool", "/opt/tarantool/app.lua"]
+CMD ["/opt/tarantool/init.sh"]

@@ -215,7 +215,6 @@ function UserVisitsHandler:get(id)
         if table.maxn(visits) == 0 then
             self:write('{"visits": []}')
         else
-            log.error(table.tostring(visits))
             self:write(cjson.encode({
                 visits = visits
             }))
@@ -447,7 +446,7 @@ function VisitHandler:post(id)
     if visit then
         visit_new = utils.json_decode(self)
         local update_table = {}
-        if visit_new.location ~= nil then
+        if visit_new.location then
             table.insert(update_table, {'=', 2, visit_new.location})
             local location_new = box.space.locations:get(visit_new.location)
             if location_new then
@@ -455,7 +454,7 @@ function VisitHandler:post(id)
                 table.insert(update_table, {'=', 7, location_new[2]})
             end
         end
-        if visit_new.user ~= nil then
+        if visit_new.user then
             table.insert(update_table, {'=', 3, visit_new.user})
             local user_new = box.space.users:get(visit_new.user)
             if user_new then
@@ -463,10 +462,10 @@ function VisitHandler:post(id)
                 table.insert(update_table, {'=', 9, user_new[6]})
             end
         end
-        if visit_new.visited_at ~= nil then
+        if visit_new.visited_at then
             table.insert(update_table, {'=', 4, visit_new.visited_at})
         end
-        if visit_new.mark ~= nil then
+        if visit_new.mark then
             table.insert(update_table, {'=', 5, visit_new.mark})
         end
         log.error(table.tostring(update_table))
