@@ -1,5 +1,6 @@
 local module = {}
 local turbo = require("turbo")
+local cjson = require("cjson")
 
 function module.read_file(file)
     local f = io.open(file, "rb")
@@ -30,6 +31,25 @@ function module.get_argument(r, arg_name)
         return value
     end
     return value
+end
+
+function module.json_decode(rh)
+    if not rh.request.body then
+        error(turbo.web.HTTPError(400))
+        return
+    end
+    if rh.request.body:match('": ?null,?') then
+        error(turbo.web.HTTPError(400))
+        return
+    end
+    local decoded_object = nil
+    local status, decode_error = pcall(function() 
+        decoded_object = cjson.decode(rh.request.body)
+    end)
+    if decode_error then
+        error(turbo.web.HTTPError(400))
+    end
+    return decoded_object
 end
 
 

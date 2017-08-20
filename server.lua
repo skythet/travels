@@ -28,14 +28,8 @@ function UserHandler:post(id)
     id = tonumber(id)
     local user = box.space.users:get(id)
     if user then
-        if self.request.body:match('": ?null,') then
-            error(turbo.web.HTTPError(400))
-            return
-        end
-        local user_new, decode_error = pcall(cjson.decode, self.request.body)
-        if decode_error then
-            error(turbo.web.HTTPError(400))
-        end
+        user = user:totable()
+        user_new = utils.json_decode(self)
         if user_new.email then
             user[2] = user_new.email
         end
@@ -65,11 +59,41 @@ function UserHandler:post(id)
             {'=', 6, user[6]},
         })
 
+        for _, visit_tuple in box.space.visits.index.user:pairs(id) do
+            box.space.visits:update(visit_tuple[1], {
+                {'=', 8, user[5]},
+                {'=', 9, user[6]}
+            })
+        end 
+
         self:write('{}')
         self:set_header('Content-Type', 'application/json')
         return
     end
     error(turbo.web.HTTPError(404))
+end
+
+local UserNewHandler = class("UserNewHandler", turbo.web.RequestHandler)
+function UserNewHandler:post()
+    local user_new = utils.json_decode(self)
+
+    local status, insert_error = pcall(function() 
+        box.space.users:insert({
+            tonumber(user_new.id),
+            user_new.email,
+            user_new.first_name,
+            user_new.last_name,
+            user_new.gender,
+            user_new.birth_date
+        })
+    end)
+
+    if insert_error then
+        error(turbo.web.HTTPError(400))
+    end
+
+    self:write('{}')
+    self:set_header('Content-Type', 'application/json')
 end
 
 local UserVisitsHandler = class("UserVisitsHandler", turbo.web.RequestHandler)
@@ -164,6 +188,68 @@ function LocationHandler:get(id)
     error(turbo.web.HTTPError(404))
 end
 
+local LocationNewHandler = class("LocationNewHandler", turbo.web.RequestHandler)
+function LocationNewHandler:post()
+    local location_new = utils.json_decode(self)
+
+    local status, insert_error = pcall(function() 
+        box.space.locations:insert({
+            location_new.id,
+            location_new.place,
+            location_new.country,
+            location_new.city,
+            location_new.distance
+        })
+    end)
+
+    if insert_error then
+        error(turbo.web.HTTPError(400))
+    end
+
+    self:write('{}')
+    self:set_header('Content-Type', 'application/json')
+end
+
+function LocationHandler:post(id)
+    id = tonumber(id)
+    local location = box.space.locations:get(id)
+    if location then
+        location = location:totable()
+        location_new = utils.json_decode(self)
+        if location_new.place then
+            location[2] = location_new.place
+        end
+        if location_new.country then
+            location[3] = location_new.country
+        end
+        if location_new.city then
+            location[4] = location_new.city
+        end
+        if location_new.dictance then
+            location[5] = location_new.distance
+        end
+
+        box.space.locations:update(id, {
+            {'=', 2, location[2]},
+            {'=', 3, location[3]},
+            {'=', 4, location[4]},
+            {'=', 5, location[5]},
+        })
+
+        for _, visit_tuple in box.space.visits.index.location:pairs(id) do
+            box.space.visits:update(visit_tuple[1], {
+                {'=', 6, location[5]},
+                {'=', 7, location[2]}
+            })
+        end
+
+        self:write('{}')
+        self:set_header('Content-Type', 'application/json')
+        return
+    end
+    error(turbo.web.HTTPError(404))
+end
+
 local LocationAvgHandler = class("LocationAvgHandler", turbo.web.RequestHandler)
 function LocationAvgHandler:get(id)
     id = tonumber(id)
@@ -247,12 +333,84 @@ function VisitHandler:get(id)
     error(turbo.web.HTTPError(404))
 end
 
+local VisitNewHandler = class("VisitNewHandler", turbo.web.RequestHandler)
+function VisitNewHandler:post()
+    local visit_new = utils.json_decode(self)
+
+    local location = box.space.locations:get(visit_new.location)
+    if not location then
+        error(turbo.web.HTTPError(400))
+    end
+
+    local user = box.space.users:get(visit_new.user)
+    if not user then
+        error(turbo.web.HTTPError(400))
+    end
+
+    local status, insert_error = pcall(function()
+        box.space.visits:insert{
+            visit_new.id, 
+            visit_new.location, 
+            visit_new.user, 
+            visit_new.visited_at, 
+            visit_new.mark,
+            location[5],
+            location[2],
+            user[5], -- gender
+            user[6] -- birth date
+        }
+    end)
+
+    if insert_error then
+        error(turbo.web.HTTPError(400))
+    end
+
+    self:write('{}')
+    self:set_header('Content-Type', 'application/json')
+end
+
+function VisitHandler:post(id)
+    id = tonumber(id)
+    local visit = box.space.visits:get(id)
+    if visit then
+        visit = visit:totable()
+        visit_new = utils.json_decode(self)
+        if visit_new.location then
+            visit[2] = visit_new.location
+        end
+        if visit_new.user then
+            visit[3] = visit_new.user
+        end
+        if visit_new.visited_at then
+            visit[4] = visit_new.visited_at
+        end
+        if visit_new.mark then
+            visit[5] = visit_new.mark
+        end
+
+        box.space.visits:update(id, {
+            {'=', 2, visit[2]},
+            {'=', 3, visit[3]},
+            {'=', 4, visit[4]},
+            {'=', 5, visit[5]},
+        })
+
+        self:write('{}')
+        self:set_header('Content-Type', 'application/json')
+        return
+    end
+    error(turbo.web.HTTPError(404))
+end
+
 local app = turbo.web.Application:new({
     {"^/users/(%d+)/?$", UserHandler},
+    {"^/users/new/?$", UserNewHandler},
     {"^/users/(%d+)/visits/?$", UserVisitsHandler},
     {"^/locations/(%d+)/?$", LocationHandler},
     {"^/locations/(%d+)/avg/?$", LocationAvgHandler},
-    {"^/visits/(%d+)/?$", VisitHandler}
+    {"^/locations/new/?$", LocationNewHandler},
+    {"^/visits/(%d+)/?$", VisitHandler},
+    {"^/visits/new/?$", VisitNewHandler}
 })
 
 app:listen(80)
