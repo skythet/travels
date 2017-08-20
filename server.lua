@@ -28,7 +28,6 @@ function UserHandler:post(id)
     id = tonumber(id)
     local user = box.space.users:get(id)
     if user then
-        log.error('Request body is: ' .. tostring(self.request.body))
         if self.request.body:match('": ?null,') then
             error(turbo.web.HTTPError(400))
             return
@@ -97,15 +96,15 @@ function UserVisitsHandler:get(id)
         local visits = {}
         for _, visit_tuple in box.space.visits.index.user:pairs{id} do
             local correct = true
-            if from_date and visit_tuple[4] < tonumber(from_date) then
+            if from_date and visit_tuple[4] <= tonumber(from_date) then
                 correct = false
             end
 
-            if correct and to_date and visit_tuple[4] > tonumber(to_date) then
+            if correct and to_date and visit_tuple[4] >= tonumber(to_date) then
                 correct = false
             end
 
-            if correct and to_distance and visit_tuple[6] > tonumber(to_distance) then
+            if correct and to_distance and visit_tuple[6] >= tonumber(to_distance) then
                 correct = false
             end
             
@@ -192,11 +191,11 @@ function LocationAvgHandler:get(id)
         local avg = 0;
         for _, visit_tuple in box.space.visits.index.location:pairs(id) do
             local correct = true
-            if from_date and visit_tuple[4] < tonumber(from_date) then
+            if from_date and visit_tuple[4] <= tonumber(from_date) then
                 correct = false
             end
 
-            if correct and to_date and visit_tuple[4] > tonumber(to_date) then
+            if correct and to_date and visit_tuple[4] >= tonumber(to_date) then
                 correct = false
             end
 
@@ -205,11 +204,11 @@ function LocationAvgHandler:get(id)
             end
 
             local user_age = os.date('%Y', os.time() - (visit_tuple[9])) - 1970
-            if correct and from_age and tonumber(from_age) > user_age then
+            if correct and from_age and (user_age <= tonumber(from_age)) then
                 correct = false
             end
 
-            if correct and to_age and tonumber(to_age) < user_age then
+            if correct and to_age and (tonumber(to_age) <= user_age) then
                 correct = false
             end
 
@@ -249,14 +248,20 @@ function VisitHandler:get(id)
 end
 
 local app = turbo.web.Application:new({
-    {"/users/(%d+)/?$", UserHandler},
-    {"/users/(%d+)/visits/?$", UserVisitsHandler},
-    {"/locations/(%d+)/?$", LocationHandler},
-    {"/locations/(%d+)/avg/?$", LocationAvgHandler},
-    {"/visits/(%d+)/?$", VisitHandler}
+    {"^/users/(%d+)/?$", UserHandler},
+    {"^/users/(%d+)/visits/?$", UserVisitsHandler},
+    {"^/locations/(%d+)/?$", LocationHandler},
+    {"^/locations/(%d+)/avg/?$", LocationAvgHandler},
+    {"^/visits/(%d+)/?$", VisitHandler}
 })
 
 app:listen(80)
+
+turbo.ioloop.instance():add_signal_handler(turbo.signal.SIGINT, function() 
+    turbo.ioloop.instance():close()
+end)
+
 turbo.ioloop.instance():start()
+
 
 return module

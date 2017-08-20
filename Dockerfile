@@ -17,6 +17,6 @@ RUN mkdir -p /opt/tarantool/data
 ADD . /opt/tarantool
 WORKDIR /opt/tarantool
 
-EXPOSE 80
+EXPOSE 80 3301
 
 CMD ["tarantool", "/opt/tarantool/app.lua"]
