@@ -24,6 +24,55 @@ function UserHandler:get(id)
     error(turbo.web.HTTPError(404))
 end
 
+function UserHandler:post(id)
+    id = tonumber(id)
+    local user = box.space.users:get(id)
+    if user then
+        log.error('Request body is: ' .. tostring(self.request.body))
+        if self.request.body:match('": ?null,') then
+            error(turbo.web.HTTPError(400))
+            return
+        end
+        local user_new, decode_error = pcall(cjson.decode, self.request.body)
+        if decode_error then
+            error(turbo.web.HTTPError(400))
+        end
+        if user_new.email then
+            user[2] = user_new.email
+        end
+        if user_new.first_name then
+            user[3] = user_new.first_name
+        end
+        if user_new.last_name then
+            user[4] = user_new.last_name
+        end
+        if user_new.gender then
+            if user_new.gender ~= 'f' and user_new.gender ~= 'm' then
+                error(turbo.web.HTTPError(400))
+                return
+            end
+            user[5] = user_new.gender
+        end
+        if user_new.birth_date then
+            utils.check_is_integer(user_new.birth_date)
+            user[6] = user_new.birth_date
+        end
+
+        box.space.users:update(id, {
+            {'=', 2, user[2]},
+            {'=', 3, user[3]},
+            {'=', 4, user[4]},
+            {'=', 5, user[5]},
+            {'=', 6, user[6]},
+        })
+
+        self:write('{}')
+        self:set_header('Content-Type', 'application/json')
+        return
+    end
+    error(turbo.web.HTTPError(404))
+end
+
 local UserVisitsHandler = class("UserVisitsHandler", turbo.web.RequestHandler)
 function UserVisitsHandler:get(id)
     id = tonumber(id)
@@ -85,9 +134,13 @@ function UserVisitsHandler:get(id)
         table.sort(visits, function(visit1, visit2)
             return visit1.visited_at < visit2.visited_at
         end)
-        self:write(cjson.encode({
-            visits = visits
-        }))
+        if table.maxn(visits) == 0 then
+            self:write('{"visits": []}')
+        else
+            self:write(cjson.encode({
+                visits = visits
+            }))
+        end
         self:set_header('Content-Type', 'application/json')
 
         return
@@ -152,11 +205,11 @@ function LocationAvgHandler:get(id)
             end
 
             local user_age = os.date('%Y', os.time() - (visit_tuple[9])) - 1970
-            if correct and from_age and from_age > user_age then
+            if correct and from_age and tonumber(from_age) > user_age then
                 correct = false
             end
 
-            if correct and to_age and to_age < user_age then
+            if correct and to_age and tonumber(to_age) < user_age then
                 correct = false
             end
 
