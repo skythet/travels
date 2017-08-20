@@ -29,16 +29,16 @@ function UserVisitsHandler:get(id)
     id = tonumber(id)
     local user = box.space.users:get(id)
     if user then
-        local from_date = self:get_arguments('fromDate')
+        local from_date = utils.get_argument(self, 'fromDate')
         utils.check_is_integer(from_date)
 
-        local to_date = self:get_arguments('toDate')
+        local to_date = utils.get_argument(self, 'toDate')
         utils.check_is_integer(to_date)
 
-        local to_distance = self:get_arguments('toDistance')
+        local to_distance = utils.get_argument(self, 'toDistance')
         utils.check_is_integer(to_distance)
 
-        local country = self:get_arguments('country')
+        local country = utils.get_argument(self, 'country')
         -- todo check country
         local locations = nil
         if country then
@@ -82,7 +82,9 @@ function UserVisitsHandler:get(id)
             end
         end
 
-
+        table.sort(visits, function(visit1, visit2)
+            return visit1.visited_at < visit2.visited_at
+        end)
         self:write(cjson.encode({
             visits = visits
         }))
@@ -115,19 +117,19 @@ function LocationAvgHandler:get(id)
     id = tonumber(id)
     local location = box.space.locations:get(id)
     if location then
-        local from_date = self:get_arguments('fromDate')
+        local from_date = utils.get_argument(self, 'fromDate')
         utils.check_is_integer(from_date)
 
-        local to_date = self:get_arguments('toDate')
+        local to_date = utils.get_argument(self, 'toDate')
         utils.check_is_integer(to_date)
 
-        local from_age = self:get_arguments('fromAge')
+        local from_age = utils.get_argument(self, 'fromAge')
         utils.check_is_integer(from_age)
 
-        local to_age = self:get_arguments('toAge')
+        local to_age = utils.get_argument(self, 'toAge')
         utils.check_is_integer(to_age)
 
-        local gender = self:get_arguments('gender')
+        local gender = utils.get_argument(self, 'gender')
         if gender and gender ~= 'f' and gender ~= 'm' then
             error(turbo.web.HTTPError(400))
         end
@@ -145,7 +147,16 @@ function LocationAvgHandler:get(id)
                 correct = false
             end
 
-            if correct and gender and visit[9] ~= gender then
+            if correct and gender and visit_tuple[8] ~= gender then
+                correct = false
+            end
+
+            local user_age = os.date('%Y', os.time() - (visit_tuple[9])) - 1970
+            if correct and from_age and from_age > user_age then
+                correct = false
+            end
+
+            if correct and to_age and to_age < user_age then
                 correct = false
             end
 

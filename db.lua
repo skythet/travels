@@ -52,8 +52,8 @@ function module.load_data()
                         visit.mark,
                         location[5],
                         location[2],
-                        user[5],
-                        user[6]
+                        user[5], -- gender
+                        user[6] -- birth date
                     }
                 end 
             end
