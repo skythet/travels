@@ -3,6 +3,7 @@ local module = {}
 local lfs = require("lfs")
 local utils = require("utils")
 local cjson = require("cjson")
+local msgpack = require("msgpack")
 
 function module.init_schema()
     box.schema.create_space('users')
@@ -21,6 +22,8 @@ function module.init_schema()
 end
 
 function module.load_data()
+    log.error("Start loading data...")
+
     local data_dir = '/tmp/data/'
     local extension = '.json'
     for file in lfs.dir(data_dir) do
@@ -44,21 +47,36 @@ function module.load_data()
                 for _, visit in pairs(entities.visits) do
                     local location = box.space.locations:get(visit.location)
                     local user = box.space.users:get(visit.user)
+                    local distance = msgpack.NULL
+                    local country = msgpack.NULL
+                    local gender = msgpack.NULL
+                    local birth_date = msgpack.NULL
+
+                    if location then
+                        distance = location[5]
+                        country = location[2]
+                    end
+
+                    if user then
+                        gender = user[5]
+                        birth_date = user[6]
+                    end
                     box.space.visits:insert{
                         visit.id, 
                         visit.location, 
                         visit.user, 
                         visit.visited_at, 
                         visit.mark,
-                        location[5],
-                        location[2],
-                        user[5], -- gender
-                        user[6] -- birth date
+                        distance,
+                        country,
+                        gender,
+                        birth_date
                     }
                 end 
             end
         end
     end
+    log.error("All data loaded")
 end
 
 return module
