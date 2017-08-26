@@ -15,7 +15,7 @@ function module.init_schema()
 
     box.schema.create_space('visits')
     box.space.visits:create_index('primary', {parts = {1, 'integer'}})
-    box.space.visits:create_index('user', {parts = {3, 'integer'}, unique = false})
+    box.space.visits:create_index('user_visit', {parts = {3, 'integer', 4, 'integer'}, unique = false})
     box.space.visits:create_index('location', {parts = {2, 'integer'}, unique = false})
 
     box.schema.user.grant('guest', 'read,write,execute', 'universe')
@@ -24,7 +24,7 @@ end
 function module.load_data()
     log.error("Start loading data...")
 
-    local data_dir = '/tmp/data/'
+    local data_dir = '/srv/data/'
     local extension = '.json'
     for file in lfs.dir(data_dir) do
         if file:len() > extension:len() and file:sub((file:len() - extension:len()) + 1) == extension then
@@ -48,13 +48,13 @@ function module.load_data()
                     local location = box.space.locations:get(visit.location)
                     local user = box.space.users:get(visit.user)
                     local distance = msgpack.NULL
-                    local country = msgpack.NULL
+                    local place = msgpack.NULL
                     local gender = msgpack.NULL
                     local birth_date = msgpack.NULL
 
                     if location then
                         distance = location[5]
-                        country = location[2]
+                        place = location[2]
                     end
 
                     if user then
@@ -68,7 +68,7 @@ function module.load_data()
                         visit.visited_at, 
                         visit.mark,
                         distance,
-                        country,
+                        place,
                         gender,
                         birth_date
                     }
