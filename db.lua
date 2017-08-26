@@ -4,6 +4,7 @@ local lfs = require("lfs")
 local utils = require("utils")
 local cjson = require("cjson")
 local msgpack = require("msgpack")
+local log = require("log")
 
 function module.init_schema()
     box.schema.create_space('users')
@@ -20,63 +21,124 @@ function module.init_schema()
 
     box.schema.user.grant('guest', 'read,write,execute', 'universe')
 end
+function load_file(file_name)
+    local content = read_file(file_name)
+    local entities = cjson.decode(content)
+    
+    if entities.users then
+        box.begin()
+        for _, user in pairs(entities.users) do
+            box.space.users:insert{
+                user.id, user.email, user.first_name, user.last_name, user.gender, user.birth_date,
+                cjson.encode(user)
+            }
+        end
+        box.commit()
+    end
+
+    if entities.locations then
+        box.begin()
+        for _, location in pairs(entities.locations) do
+            box.space.locations:insert{
+                location.id, location.place, location.country, location.city, location.distance,
+                cjson.encode(location)
+            }
+        end 
+        box.commit()
+    end
+
+    if entities.visits then
+        for _, visit in pairs(entities.visits) do
+            local gender = msgpack.NULL
+            local birth_date = msgpack.NULL
+            local place = msgpack.NULL
+            local distance = msgpack.NULL
+            local country = msgpack.NULL
+
+            local location = box.space.locations:get(visit.location)
+            if location ~= nil then
+                place = location[2]
+                distance = location[5]
+                country = location[3]
+            end
+
+            local user = box.space.users:get(visit.user)
+            if user ~= nil then
+                gender = user[5]
+                birth_date = user[6]
+            end
+
+            box.space.visits:insert{
+                visit.id, 
+                visit.location, 
+                visit.user, 
+                visit.visited_at, 
+                visit.mark,
+                distance, -- distance
+                place, -- place
+                gender, -- gender
+                birth_date, -- birth date
+                country,
+                cjson.encode(visit)
+            }
+        end 
+    end
+end
+
+-- https://stackoverflow.com/questions/4990990/lua-check-if-a-file-exists
+function file_exists(name)
+   local f = io.open(name, "r")
+   if f ~= nil then io.close(f) return true else return false end
+end
 
 function module.load_data()
-    log.error("Start loading data...")
-
     local data_dir = '/srv/data/'
     local extension = '.json'
-    for file in lfs.dir(data_dir) do
-        if file:len() > extension:len() and file:sub((file:len() - extension:len()) + 1) == extension then
-            local content = utils.read_file(data_dir .. file)
-            local entities = cjson.decode(content)
-            
-            if entities.users then
-                for _, user in pairs(entities.users) do
-                    box.space.users:insert{user.id, user.email, user.first_name, user.last_name, user.gender, user.birth_date}
-                end
-            end
 
-            if entities.locations then
-                for _, location in pairs(entities.locations) do
-                    box.space.locations:insert{location.id, location.place, location.country, location.city, location.distance}
-                end 
-            end
+    log.error('Load data...')
 
-            if entities.visits then
-                for _, visit in pairs(entities.visits) do
-                    local location = box.space.locations:get(visit.location)
-                    local user = box.space.users:get(visit.user)
-                    local distance = msgpack.NULL
-                    local place = msgpack.NULL
-                    local gender = msgpack.NULL
-                    local birth_date = msgpack.NULL
-
-                    if location then
-                        distance = location[5]
-                        place = location[2]
-                    end
-
-                    if user then
-                        gender = user[5]
-                        birth_date = user[6]
-                    end
-                    box.space.visits:insert{
-                        visit.id, 
-                        visit.location, 
-                        visit.user, 
-                        visit.visited_at, 
-                        visit.mark,
-                        distance,
-                        place,
-                        gender,
-                        birth_date
-                    }
-                end 
-            end
+    local count = 1
+    while true do
+        local file_name = data_dir.."/users_"..tostring(count)..".json"
+        if file_exists(file_name) then
+            load_file(file_name)
+        else
+            break
         end
+        count = count + 1
     end
-    log.error("All data loaded")
+
+    count = 1
+    while true do
+        local file_name = data_dir.."/locations_"..tostring(count)..".json"
+        if file_exists(file_name) then
+            load_file(file_name)
+        else
+            break
+        end
+        count = count + 1
+    end
+
+    count = 1
+    while true do
+        local file_name = data_dir.."/visits_"..tostring(count)..".json"
+        if file_exists(file_name) then
+            load_file(file_name)
+        else
+            break
+        end
+        count = count + 1
+    end
+
+    log.error('All data loaded')
 end
+
+function read_file(file)
+    local f = io.open(file, "rb")
+    local content = f:read("*all")
+    f:close()
+    return content
+end
+
 
 return module
