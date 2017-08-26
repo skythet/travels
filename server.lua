@@ -613,7 +613,6 @@ function VisitHandler:post(id)
         if visit_new.mark then
             table.insert(update_table, {'=', 5, visit_new.mark})
         end
-        log.error(table.tostring(update_table))
         box.space.visits:update(id, update_table)
 
         self:write('{}')
