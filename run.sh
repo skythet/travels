@@ -3,7 +3,7 @@
 DATA_PATH=$1
 
 docker run --rm \
-    -d -e TZ=Europe/Moscow \
+    -d --memory=4g\
     -v "$DATA_PATH":/srv/data \
     -v $(pwd):/opt/tarantool \
     --name hlcup \
