@@ -7,10 +7,10 @@ local log = require("log")
 local fiber = require("fiber")
 
 function module.init_schema()
-    box.schema.space.create('users')
+    box.schema.space.create('users', {engine = 'vinyl'})
     box.space.users:create_index('primary', {parts = {1, 'integer'}})
 
-    box.schema.space.create('locations')
+    box.schema.space.create('locations', {engine = 'vinyl'})
     box.space.locations:create_index('primary', {parts = {1, 'integer'}})
     box.space.locations:create_index('country', {parts = {3, 'string'}, unique = false})
 
@@ -46,8 +46,6 @@ function module.load_file(file_name, cond)
     end
 
     if entities.visits then
-        local locations_cache = {}
-        local users_cache = {}
         for _, visit in pairs(entities.visits) do
             local gender = msgpack.NULL
             local birth_date = msgpack.NULL
@@ -55,13 +53,8 @@ function module.load_file(file_name, cond)
             local distance = msgpack.NULL
             local country = msgpack.NULL
 
-            if locations_cache[visit.location] == nil then
-                locations_cache[visit.location] = box.space.locations:get(visit.location):totable()
-            end
-
-            if users_cache[visit.user] == nil then
-                users_cache[visit.user] = box.space.users:get(visit.user):totable()
-            end
+            local location = box.space.locations:get(visit.location):totable()
+            local user = box.space.users:get(visit.user):totable()
 
             box.space.visits:insert{
                 visit.id, 
@@ -69,11 +62,11 @@ function module.load_file(file_name, cond)
                 visit.user, 
                 visit.visited_at, 
                 visit.mark,
-                locations_cache[visit.location][5], -- distance
-                locations_cache[visit.location][2], -- place
-                users_cache[visit.user][5], -- gender
-                users_cache[visit.user][6], -- birth date
-                locations_cache[visit.location][3],
+                location[5], -- distance
+                location[2], -- place
+                user[5], -- gender
+                user[6], -- birth date
+                location[3],
                 '{"id": '..tostring(visit.id)..', '..
                 '"location": '..tostring(visit.location)..', '..
                 '"user": '..tostring(visit.user)..', '..
@@ -114,7 +107,7 @@ function module.load_data(entity_name)
             break
         end
 
-        if table.maxn(fibers) == 10 then
+        if table.maxn(fibers) == 20 then
             for _, load_fiber in pairs(fibers) do
                 log.error(load_fiber.fiber:status())
                 if load_fiber.fiber:status() ~= 'dead' then
