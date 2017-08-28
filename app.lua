@@ -3,12 +3,13 @@ console = require('console')
 db = require('db')
 
 box.cfg {
-    memtx_memory = (3 * 1024) * 1024 * 1024;
-    -- vinyl_memory = (2 * 1024) * 1024 * 1024;
+    memtx_memory = (1 * 1024) * 1024 * 1024;
+    vinyl_memory = (1 * 1024) * 1024 * 1024;
+    vinyl_cache = 512 * 1024 * 1024;
     vinyl_dir = '/var/lib/tarantool/';
     memtx_dir = '/var/lib/tarantool/';
     wal_dir = '/var/lib/tarantool/';
-    wal_mode = 'none';
+    wal_mode = 'write';
 }
 
 console.listen('0.0.0.0:3302')

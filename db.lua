@@ -14,7 +14,7 @@ function module.init_schema()
     box.space.locations:create_index('primary', {parts = {1, 'integer'}})
     box.space.locations:create_index('country', {parts = {3, 'string'}, unique = false})
 
-    box.schema.space.create('visits')
+    box.schema.space.create('visits', {engine = 'vinyl'})
     box.space.visits:create_index('primary', {parts = {1, 'integer'}})
     box.space.visits:create_index('user_visit', {parts = {3, 'integer', 4, 'integer'}, unique = false})
     box.space.visits:create_index('location', {parts = {2, 'integer'}, unique = false})
