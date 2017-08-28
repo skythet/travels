@@ -484,7 +484,7 @@ function VisitNewHandler:post()
     local birth_date = msgpack.NULL
     if user then
         gender = user[5]
-        birth_date = user[6]
+        birth_date = utils.get_user_age(user[6])
     end
 
     box.space.visits:insert{
@@ -528,7 +528,7 @@ function VisitHandler:post(id)
             local user_new = box.space.users:get(visit_new.user)
             if user_new then
                 table.insert(update_table, {'=', 8, user_new[5]})
-                table.insert(update_table, {'=', 9, user_new[6]})
+                table.insert(update_table, {'=', 9, utils.get_user_age(user_new[6])})
             end
         end
         if visit_new.visited_at then
