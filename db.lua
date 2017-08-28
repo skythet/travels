@@ -26,7 +26,7 @@ module.locations_cache = {}
 module.users_cache = {}
 
 function module.load_file(file_name, cond)
-    log.error("Start loading file "..file_name)
+    -- log.error("Start loading file "..file_name)
     local content = read_file(file_name)
     local entities = cjson.decode(content)
     
@@ -84,7 +84,7 @@ function module.load_file(file_name, cond)
         end 
     end
 
-    log.error("File loaded "..file_name)
+    -- log.error("File loaded "..file_name)
 end
 
 -- https://stackoverflow.com/questions/4990990/lua-check-if-a-file-exists
