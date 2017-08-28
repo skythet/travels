@@ -11,7 +11,14 @@ local UserHandler = class("UserHandler", turbo.web.RequestHandler)
 function UserHandler:get(id)
     local user = box.space.users:get(tonumber(id))
     if user then
-        self:write(user[7])
+        self:write(cjson.encode({
+            id = user[1],
+            email = user[2],
+            first_name = user[3],
+            last_name = user[4],
+            gender = user[5],
+            birth_date = user[6]
+        }))
         self:set_header('Content-Type', 'application/json')
         return
     end
@@ -26,15 +33,15 @@ function UserHandler:post(id)
         user_new = utils.json_decode(self)
         local update_table = {}
         if user_new.email then
-            user[2] = user_new.email
+            -- user[2] = user_new.email
             table.insert(update_table, {'=', 2, user_new.email})
         end
         if user_new.first_name then
-            user[3] = user_new.first_name
+            -- user[3] = user_new.first_name
             table.insert( update_table,{'=', 3, user_new.first_name} )
         end
         if user_new.last_name then
-            user[4] = user_new.last_name
+            -- user[4] = user_new.last_name
             table.insert( update_table,{'=', 4, user_new.last_name} )
         end
         if user_new.gender then
@@ -47,21 +54,20 @@ function UserHandler:post(id)
             user[6] = user_new.birth_date
         end
 
-        table.insert(update_table, {'=', 7, cjson.encode({
-            id = user[1],
-            email = user[2],
-            first_name = user[3],
-            last_name = user[4],
-            gender = user[5],
-            birth_date = user[6]
-        })})
+        -- table.insert(update_table, {'=', 7, cjson.encode({
+        --     id = user[1],
+        --     email = user[2],
+        --     first_name = user[3],
+        --     last_name = user[4],
+        --     gender = user[5],
+        --     birth_date = user[6]
+        -- })})
 
         box.space.users:update(id, update_table)
-
         for _, visit_tuple in box.space.visits.index.user_visit:pairs({id, nil}) do
             box.space.visits:update(visit_tuple[1], {
                 {'=', 8, user[5]},
-                {'=', 9, user[6]}
+                {'=', 9, utils.get_user_age(user[6])}
             })
         end 
 
@@ -83,13 +89,13 @@ function UserNewHandler:post()
         user_new.last_name,
         user_new.gender,
         user_new.birth_date,
-        self.request.body
+        -- self.request.body
     })
 
     for _, visit_tuple in box.space.visits.index.user_visit:pairs({tonumber(user_new.id), nil}) do
         box.space.visits:update(visit_tuple[1], {
             {'=', 8, user_new.gender},
-            {'=', 9, user_new.birth_date}
+            {'=', 9, utils.get_user_age(user_new.birth_date)}
         })
     end
 
@@ -194,7 +200,13 @@ local LocationHandler = class("LocationHandler", turbo.web.RequestHandler)
 function LocationHandler:get(id)
     local location = box.space.locations:get(tonumber(id))
     if location then
-        self:write(location[6])
+        self:write(cjson.encode({
+            id = location[1],
+            place = location[2],
+            country = location[3],
+            city = location[4],
+            distance = location[5]
+        }))
         self:set_header('Content-Type', 'application/json')
         return
     end
@@ -211,7 +223,7 @@ function LocationNewHandler:post()
         location_new.country,
         location_new.city,
         location_new.distance,
-        self.request.body
+        -- self.request.body
     })
 
     for _, visit_tuple in box.space.visits.index.location:pairs(location_new.id) do
@@ -250,13 +262,13 @@ function LocationHandler:post(id)
             table.insert(update_table, {'=', 5, location_new.distance})
         end
 
-        table.insert(update_table, {'=', 6, {
-            id = location[1],
-            place = location[2],
-            country = location[3],
-            city = location[4],
-            distance = location[5]
-        }})
+        -- table.insert(update_table, {'=', 6, {
+        --     id = location[1],
+        --     place = location[2],
+        --     country = location[3],
+        --     city = location[4],
+        --     distance = location[5]
+        -- }})
 
         box.space.locations:update(id, update_table)
 
@@ -315,14 +327,14 @@ function LocationAvgHandler:get(id)
                 correct = false
             end
 
-            local birth_date = visit_tuple[9]
+            -- local birth_date = visit_tuple[9]
 
-            local user_age = os.date('%Y', os.time() - (birth_date)) - 1970
-            if correct and from_age and (user_age < tonumber(from_age)) then
+            -- local user_age = os.date('%Y', CURRENT_TIME - (birth_date)) - 1970
+            if correct and from_age and (visit_tuple[9] < tonumber(from_age)) then
                 correct = false
             end
 
-            if correct and to_age and (tonumber(to_age) <= user_age) then
+            if correct and to_age and (tonumber(to_age) <= visit_tuple[9]) then
                 correct = false
             end
 
@@ -380,27 +392,15 @@ function LocationVisitsHandler:get(id)
                 correct = false
             end
 
-            local visit_user_gender = visit_tuple[8]
-            if correct and gender then
-                if visit_user_gender == msgpack.NULL then
-                     visit_user_gender = box.space.users:get(visit_tuple[3])[5]
-                end
-                if visit_user_gender ~= gender then
-                    correct = false
-                end
-            end
-
-            local birth_date = visit_tuple[9]
-            if birth_date == msgpack.NULL then
-                birth_date = box.space.users:get(visit_tuple[3])[6]
-            end
-
-            local user_age = os.date('%Y', os.time() - (birth_date)) - 1970
-            if correct and from_age and (user_age < tonumber(from_age)) then
+            if correct and gender and (visit_tuple[8] ~= gender) then
                 correct = false
             end
 
-            if correct and to_age and (tonumber(to_age) <= user_age) then
+            if correct and from_age and (visit_tuple[9] < tonumber(from_age)) then
+                correct = false
+            end
+
+            if correct and to_age and (tonumber(to_age) <= visit_tuple[9]) then
                 correct = false
             end
 
@@ -408,8 +408,8 @@ function LocationVisitsHandler:get(id)
                 table.insert( visits, {
                     id = tostring(visit_tuple[1]),
                     visited_at = tostring(visit_tuple[4]),
-                    gender = tostring(visit_user_gender),
-                    age = tostring(user_age),
+                    gender = tostring(visit_tuple[8]),
+                    age = tostring(visit_tuple[9]),
                     mark = tostring(visit_tuple[5]),
                     user_id = tostring(visit_tuple[3])
                 })
@@ -427,7 +427,13 @@ local VisitHandler = class("VisitHandler", turbo.web.RequestHandler)
 function VisitHandler:get(id)
     local visit = box.space.visits:get(tonumber(id))
     if visit then
-        self:write(visit[11])
+        self:write(cjson.encode({
+            id = visit[1],
+            location = visit[2],
+            user = visit[3],
+            visited_at = visit[4],
+            mark = visit[5]
+        }))
         self:set_header('Content-Type', 'application/json')
         return
     end
@@ -492,7 +498,7 @@ function VisitNewHandler:post()
         gender,
         birth_date,
         country,
-        self.request.body
+        -- self.request.body
     }
 
     self:write('{}')
@@ -533,13 +539,13 @@ function VisitHandler:post(id)
             visit[5] = visit_new.mark
             table.insert(update_table, {'=', 5, visit_new.mark})
         end
-        table.insert(update_table, {'=', 11, cjson.encode({
-            id = visit[1],
-            location = visit[2],
-            user = visit[3],
-            visited_at = visit[4],
-            mark = visit[5]
-        })})
+        -- table.insert(update_table, {'=', 11, cjson.encode({
+        --     id = visit[1],
+        --     location = visit[2],
+        --     user = visit[3],
+        --     visited_at = visit[4],
+        --     mark = visit[5]
+        -- })})
         box.space.visits:update(id, update_table)
 
         self:write('{}')

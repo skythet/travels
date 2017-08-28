@@ -2,6 +2,8 @@ local module = {}
 local turbo = require("turbo")
 local cjson = require("cjson")
 
+CURRENT_TIME = tonumber(os.getenv("CURRENT_TIME"))
+
 function module.read_file(file)
     local f = io.open(file, "rb")
     local content = f:read("*all")
@@ -55,6 +57,10 @@ end
 function module.round(num, numDecimalPlaces)
   local mult = 10 ^ (numDecimalPlaces or 0)
   return math.floor(num * mult + 0.5) / mult
+end
+
+function module.get_user_age(birth_date)
+    return os.date('%Y', CURRENT_TIME - (birth_date)) - 1970
 end
 
 

@@ -7,20 +7,23 @@ local log = require("log")
 local fiber = require("fiber")
 
 function module.init_schema()
-    box.schema.space.create('users', {engine = 'vinyl'})
+    box.schema.space.create('users')
     box.space.users:create_index('primary', {parts = {1, 'integer'}})
 
-    box.schema.space.create('locations', {engine = 'vinyl'})
+    box.schema.space.create('locations')
     box.space.locations:create_index('primary', {parts = {1, 'integer'}})
     box.space.locations:create_index('country', {parts = {3, 'string'}, unique = false})
 
-    box.schema.space.create('visits', {engine = 'vinyl'})
+    box.schema.space.create('visits')
     box.space.visits:create_index('primary', {parts = {1, 'integer'}})
     box.space.visits:create_index('user_visit', {parts = {3, 'integer', 4, 'integer'}, unique = false})
     box.space.visits:create_index('location', {parts = {2, 'integer'}, unique = false})
 
     box.schema.user.grant('guest', 'read,write,execute', 'universe')
 end
+
+module.locations_cache = {}
+module.users_cache = {}
 
 function module.load_file(file_name, cond)
     log.error("Start loading file "..file_name)
@@ -31,7 +34,7 @@ function module.load_file(file_name, cond)
         for _, user in pairs(entities.users) do
             box.space.users:insert{
                 user.id, user.email, user.first_name, user.last_name, user.gender, user.birth_date,
-                cjson.encode(user)
+                -- cjson.encode(user)
             }
         end
     end
@@ -40,7 +43,7 @@ function module.load_file(file_name, cond)
         for _, location in pairs(entities.locations) do
             box.space.locations:insert{
                 location.id, location.place, location.country, location.city, location.distance,
-                cjson.encode(location)
+                -- cjson.encode(location)
             }
         end
     end
@@ -53,8 +56,13 @@ function module.load_file(file_name, cond)
             local distance = msgpack.NULL
             local country = msgpack.NULL
 
-            local location = box.space.locations:get(visit.location):totable()
-            local user = box.space.users:get(visit.user):totable()
+            if not module.locations_cache[visit.location] then
+                module.locations_cache[visit.location] = box.space.locations:get(visit.location):totable()
+            end
+
+            if not module.users_cache[visit.user] then
+                module.users_cache[visit.user] = box.space.users:get(visit.user):totable()
+            end
 
             box.space.visits:insert{
                 visit.id, 
@@ -62,22 +70,21 @@ function module.load_file(file_name, cond)
                 visit.user, 
                 visit.visited_at, 
                 visit.mark,
-                location[5], -- distance
-                location[2], -- place
-                user[5], -- gender
-                user[6], -- birth date
-                location[3],
-                '{"id": '..tostring(visit.id)..', '..
-                '"location": '..tostring(visit.location)..', '..
-                '"user": '..tostring(visit.user)..', '..
-                '"visited_at": '..tostring(visit.visited_at)..', '..
-                '"mark": '..tostring(visit.mark)..'}'
+                module.locations_cache[visit.location][5], -- distance
+                module.locations_cache[visit.location][2], -- place
+                module.users_cache[visit.user][5], -- gender
+                utils.get_user_age(module.users_cache[visit.user][6]), -- user age
+                module.locations_cache[visit.location][3],
+                -- '{"id": '..tostring(visit.id)..', '..
+                -- '"location": '..tostring(visit.location)..', '..
+                -- '"user": '..tostring(visit.user)..', '..
+                -- '"visited_at": '..tostring(visit.visited_at)..', '..
+                -- '"mark": '..tostring(visit.mark)..'}'
             }
         end 
     end
 
-    cond:broadcast()
-    log.error("Signalled")
+    log.error("File loaded "..file_name)
 end
 
 -- https://stackoverflow.com/questions/4990990/lua-check-if-a-file-exists
@@ -97,30 +104,12 @@ function module.load_data(entity_name)
     while true do
         local file_name = data_dir..entity_name.."_"..tostring(count)..".json"
         if file_exists(file_name) then
-            local load_cond = fiber.cond()
-            local load_fiber = fiber.create(module.load_file, file_name, load_cond)
-            table.insert(fibers, {
-                fiber = load_fiber,
-                cond = load_cond
-            })
+            module.load_file(file_name)
         else
             break
         end
-
-        if table.maxn(fibers) == 20 then
-            for _, load_fiber in pairs(fibers) do
-                log.error(load_fiber.fiber:status())
-                if load_fiber.fiber:status() ~= 'dead' then
-                    log.error('waiting fiber')
-                    load_fiber.cond:wait()
-                end
-            end
-            fibers = {}
-        end
-            
         count = count + 1
     end
-
     log.error('All data for '..entity_name..' loaded')
 end
 
