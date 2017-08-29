@@ -14,7 +14,7 @@ function module.init_schema()
     box.space.locations:create_index('primary', {parts = {1, 'integer'}})
     box.space.locations:create_index('country', {parts = {3, 'string'}, unique = false})
 
-    box.schema.space.create('visits', {engine = 'vinyl'})
+    box.schema.space.create('visits')
     box.space.visits:create_index('primary', {parts = {1, 'integer'}})
     box.space.visits:create_index('user_visit', {parts = {3, 'integer', 4, 'integer'}, unique = false})
     box.space.visits:create_index('location', {parts = {2, 'integer'}, unique = false})
@@ -34,7 +34,6 @@ function module.load_file(file_name, cond)
         for _, user in pairs(entities.users) do
             box.space.users:insert{
                 user.id, user.email, user.first_name, user.last_name, user.gender, user.birth_date,
-                -- cjson.encode(user)
             }
         end
     end
@@ -43,7 +42,6 @@ function module.load_file(file_name, cond)
         for _, location in pairs(entities.locations) do
             box.space.locations:insert{
                 location.id, location.place, location.country, location.city, location.distance,
-                -- cjson.encode(location)
             }
         end
     end
@@ -75,11 +73,6 @@ function module.load_file(file_name, cond)
                 module.users_cache[visit.user][5], -- gender
                 utils.get_user_age(module.users_cache[visit.user][6]), -- user age
                 module.locations_cache[visit.location][3],
-                -- '{"id": '..tostring(visit.id)..', '..
-                -- '"location": '..tostring(visit.location)..', '..
-                -- '"user": '..tostring(visit.user)..', '..
-                -- '"visited_at": '..tostring(visit.visited_at)..', '..
-                -- '"mark": '..tostring(visit.mark)..'}'
             }
         end 
     end
