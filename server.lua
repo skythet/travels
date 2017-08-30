@@ -64,7 +64,7 @@ function UserHandler:post(id)
         --     birth_date = user[6]
         -- })})
 
-        -- box.space.users:update(id, update_table)
+        box.space.users:update(id, update_table)
         -- for _, visit_tuple in box.space.visits.index.user_visit:pairs({id, nil}) do
         --     box.space.visits:update(visit_tuple[1], {
         --         {'=', 8, user[5]},
@@ -150,41 +150,6 @@ function UserVisitsHandler:get(id)
                     place = location[2]
                 })
             end
-        end
-        
-        if table.maxn(visits) == 0 then
-            self:write('{"visits": []}')
-        else
-            self:write(cjson.encode({
-                visits = visits
-            }))
-        end
-        self:set_header('Content-Type', 'application/json')
-
-        return
-    end
-    error(turbo.web.HTTPError(404))
-end
-
-local UserVisitsFullHandler = class("UserVisitsFullHandler", turbo.web.RequestHandler)
-function UserVisitsFullHandler:get(id)
-    id = tonumber(id)
-    local user = box.space.users:get(id)
-    if user then
-        local visits = {}
-        for _, visit_tuple in box.space.visits.index.user_visit:pairs({id, nil}, {iterator = box.index.EQ}) do
-            table.insert(visits, {
-                id = visit_tuple[1],
-                location = visit_tuple[2],
-                user = visit_tuple[3],
-                visited_at = visit_tuple[4],
-                mark = visit_tuple[5],
-                -- distance = tostring(visit_tuple[6]),
-                -- place = tostring(visit_tuple[7]),
-                -- gender = tostring(visit_tuple[8]),
-                -- birth_date = tostring(visit_tuple[9]),
-                -- country = tostring(visit_tuple[10]),
-            })
         end
         
         if table.maxn(visits) == 0 then
