@@ -24,8 +24,8 @@ db.load_data('locations')
 db.load_data('visits')
 log.error(string.format("Data load elapsed time: %.2f\n", os.clock() - x))
 
-db.locations_cache = {}
-db.users_cache = {}
+-- db.locations_cache = {}
+-- db.users_cache = {}
 
 -- run http server
 require('server')
