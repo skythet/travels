@@ -1,4 +1,4 @@
-Solution for Highloadcup round 1. Used Tarantool/Lua
+Solution for https://highloadcup.ru/round/1/
 
 ## Dependencies
 
@@ -23,10 +23,10 @@ Other utils:
 
 ## Running
 
-1. Create data dir:
+1. Build docker container:
 
-    mkdir data
+    docker build -t travels .
 
-2. Run app.lua via tarantool:
+2. Run script:
 
-    tarantool app.lua
+    ./run.sh /path/to/train/data

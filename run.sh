@@ -7,5 +7,5 @@ docker run --rm \
     -e OPTIONS_PATH="/srv/data/options.txt" \
     -v "$DATA_PATH":/srv/data \
     -v $(pwd):/opt/tarantool \
-    --name hlcup \
-    -p 8888:80 hlcup 
+    --name travels \
+    -p 8888:80 travels
