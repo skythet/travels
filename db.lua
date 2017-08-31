@@ -22,11 +22,7 @@ function module.init_schema()
     box.schema.user.grant('guest', 'read,write,execute', 'universe')
 end
 
--- module.locations_cache = {}
--- module.users_cache = {}
-
 function module.load_file(file_name, cond)
-    -- log.error("Start loading file "..file_name)
     local content = read_file(file_name)
     local entities = cjson.decode(content)
     
@@ -35,7 +31,6 @@ function module.load_file(file_name, cond)
             box.space.users:insert{
                 user.id, user.email, user.first_name, user.last_name, user.gender, user.birth_date,
                 utils.get_user_age(user.birth_date),
-                -- cjson.encode(user)
             }
         end
     end
@@ -44,7 +39,6 @@ function module.load_file(file_name, cond)
         for _, location in pairs(entities.locations) do
             box.space.locations:insert{
                 location.id, location.place, location.country, location.city, location.distance,
-                -- cjson.encode(location)
             }
         end
     end
@@ -57,26 +51,12 @@ function module.load_file(file_name, cond)
             local distance = msgpack.NULL
             local country = msgpack.NULL
 
-            -- if not module.locations_cache[visit.location] then
-            --     module.locations_cache[visit.location] = box.space.locations:get(visit.location):totable()
-            -- end
-
-            -- if not module.users_cache[visit.user] then
-            --     module.users_cache[visit.user] = box.space.users:get(visit.user):totable()
-            -- end
-
             box.space.visits:insert{
                 visit.id, 
                 visit.location, 
                 visit.user, 
                 visit.visited_at, 
                 visit.mark,
-                -- cjson.encode(visit)
-                -- module.locations_cache[visit.location][5], -- distance
-                -- module.locations_cache[visit.location][2], -- place
-                -- module.users_cache[visit.user][5], -- gender
-                -- utils.get_user_age(module.users_cache[visit.user][6]), -- user age
-                -- module.locations_cache[visit.location][3],
             }
         end 
     end
@@ -84,7 +64,6 @@ function module.load_file(file_name, cond)
     -- log.error("File loaded "..file_name)
 end
 
--- https://stackoverflow.com/questions/4990990/lua-check-if-a-file-exists
 function file_exists(name)
    local f = io.open(name, "r")
    if f ~= nil then io.close(f) return true else return false end

@@ -33,15 +33,12 @@ function UserHandler:post(id)
         user_new = utils.json_decode(self)
         local update_table = {}
         if user_new.email then
-            -- user[2] = user_new.email
             table.insert(update_table, {'=', 2, user_new.email})
         end
         if user_new.first_name then
-            -- user[3] = user_new.first_name
             table.insert( update_table,{'=', 3, user_new.first_name} )
         end
         if user_new.last_name then
-            -- user[4] = user_new.last_name
             table.insert( update_table,{'=', 4, user_new.last_name} )
         end
         if user_new.gender then
@@ -55,22 +52,7 @@ function UserHandler:post(id)
             user[6] = user_new.birth_date
         end
 
-        -- table.insert(update_table, {'=', 7, cjson.encode({
-        --     id = user[1],
-        --     email = user[2],
-        --     first_name = user[3],
-        --     last_name = user[4],
-        --     gender = user[5],
-        --     birth_date = user[6]
-        -- })})
-
         box.space.users:update(id, update_table)
-        -- for _, visit_tuple in box.space.visits.index.user_visit:pairs({id, nil}) do
-        --     box.space.visits:update(visit_tuple[1], {
-        --         {'=', 8, user[5]},
-        --         {'=', 9, utils.get_user_age(user[6])}
-        --     })
-        -- end 
 
         self:write('{}')
         self:set_header('Content-Type', 'application/json')
@@ -91,15 +73,7 @@ function UserNewHandler:post()
         user_new.gender,
         user_new.birth_date,
         utils.get_user_age(user_new.birth_date),
-        -- self.request.body
     })
-
-    -- for _, visit_tuple in box.space.visits.index.user_visit:pairs({tonumber(user_new.id), nil}) do
-    --     box.space.visits:update(visit_tuple[1], {
-    --         {'=', 8, user_new.gender},
-    --         {'=', 9, utils.get_user_age(user_new.birth_date)}
-    --     })
-    -- end
 
     self:write('{}')
     self:set_header('Content-Type', 'application/json')
@@ -193,16 +167,7 @@ function LocationNewHandler:post()
         location_new.country,
         location_new.city,
         location_new.distance,
-        -- self.request.body
     })
-
-    -- for _, visit_tuple in box.space.visits.index.location:pairs(location_new.id) do
-    --     box.space.visits:update(visit_tuple[1], {
-    --         {'=', 6, location_new.distance},
-    --         {'=', 7, location_new.place},
-    --         {'=', 10, location_new.country}
-    --     })
-    -- end
 
     self:write('{}')
     self:set_header('Content-Type', 'application/json')
@@ -232,23 +197,7 @@ function LocationHandler:post(id)
             table.insert(update_table, {'=', 5, location_new.distance})
         end
 
-        -- table.insert(update_table, {'=', 6, {
-        --     id = location[1],
-        --     place = location[2],
-        --     country = location[3],
-        --     city = location[4],
-        --     distance = location[5]
-        -- }})
-
         box.space.locations:update(id, update_table)
-
-        -- for _, visit_tuple in box.space.visits.index.location:pairs(id) do
-        --     box.space.visits:update(visit_tuple[1], {
-        --         {'=', 6, location[5]},
-        --         {'=', 7, location[2]},
-        --         {'=', 10, location[3]},
-        --     })
-        -- end
 
         self:write('{}')
         self:set_header('Content-Type', 'application/json')
@@ -353,7 +302,6 @@ function VisitNewHandler:post()
         visit_new.user, 
         visit_new.visited_at, 
         visit_new.mark,
-        -- self.request.body
     }
 
     self:write('{}')
@@ -370,21 +318,10 @@ function VisitHandler:post(id)
         if visit_new.location then
             visit[2] = visit_new.location
             table.insert(update_table, {'=', 2, visit_new.location})
-            -- local location_new = box.space.locations:get(visit_new.location)
-            -- if location_new then
-            --     table.insert(update_table, {'=', 6, location_new[5]})
-            --     table.insert(update_table, {'=', 7, location_new[2]})
-            --     table.insert(update_table, {'=', 10, location_new[3]})
-            -- end
         end
         if visit_new.user then
             visit[3] = visit_new.user
             table.insert(update_table, {'=', 3, visit_new.user})
-            -- local user_new = box.space.users:get(visit_new.user)
-            -- if user_new then
-            --     table.insert(update_table, {'=', 8, user_new[5]})
-            --     table.insert(update_table, {'=', 9, utils.get_user_age(user_new[6])})
-            -- end
         end
         if visit_new.visited_at then
             visit[4] = visit_new.visited_at
@@ -394,13 +331,6 @@ function VisitHandler:post(id)
             visit[5] = visit_new.mark
             table.insert(update_table, {'=', 5, visit_new.mark})
         end
-        -- table.insert(update_table, {'=', 11, cjson.encode({
-        --     id = visit[1],
-        --     location = visit[2],
-        --     user = visit[3],
-        --     visited_at = visit[4],
-        --     mark = visit[5]
-        -- })})
         box.space.visits:update(id, update_table)
 
         self:write('{}')
@@ -414,13 +344,10 @@ local app = turbo.web.Application:new({
     {"^/users/(%d+)/?$", UserHandler},
     {"^/users/new/?$", UserNewHandler},
     {"^/users/(%d+)/visits/?$", UserVisitsHandler},
-    {"^/users/(%d+)/visits/full/?$", UserVisitsFullHandler},
     {"^/locations/(%d+)/?$", LocationHandler},
     {"^/locations/(%d+)/avg/?$", LocationAvgHandler},
-    {"^/locations/(%d+)/visits/?$", LocationVisitsHandler},
     {"^/locations/new/?$", LocationNewHandler},
     {"^/visits/(%d+)/?$", VisitHandler},
-    {"^/visits/(%d+)/full/?$", VisitFullHandler},
     {"^/visits/new/?$", VisitNewHandler}
 })
 

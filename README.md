@@ -1,13 +1,10 @@
+Solution for Highloadcup round 1. Used Tarantool/Lua
+
 ## Dependencies
 
 Tarantool:
 
     apt-get install tarantool tarantool-dev
-
-Tarantool http:
-
-    apt-get install luarocks
-    luarocks install https://raw.githubusercontent.com/tarantool/http/master/http-scm-1.rockspec --local
 
 Turbo:
 

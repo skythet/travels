@@ -5,7 +5,6 @@ RUN curl http://download.tarantool.org/tarantool/1.7/gpgkey | apt-key add -
 RUN echo "deb http://download.tarantool.org/tarantool/1.7/debian/ jessie main" >> /etc/apt/sources.list
 RUN apt-get update && apt-get -y install tarantool
 RUN luarocks install turbo
-RUN mkdir -p /tarantool-admin/
 
 RUN cd /tmp && \
     git clone https://github.com/mpx/lua-cjson.git && \
